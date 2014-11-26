@@ -1,4 +1,4 @@
 cryptographic-homomorphism-demonstration
 ========================================
 
-Implementation of ElGamal encryption scheme and demonstration of it's homomorphic property. 
+Implementation of various encryption schemes and demonstration of it's homomorphic property. 
