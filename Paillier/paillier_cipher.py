@@ -66,6 +66,19 @@ def decrypt(c,n,l,mi):
 		x.append(charmical_function(squareAndMultiply(y,l,n2),n)*mi % n)
 	return ascii_to_word(x)
 
+def encrypt_int(n,g,m):
+	assert m < n
+	n2 = n*n
+	r = random.randrange(1,n)
+	c = squareAndMultiply(g,m,n2)*squareAndMultiply(r,n,n2)
+	return c
+
+def decrypt_int(c,n,l,mi):
+	charmical_function = lambda u,n: (u-1)/n
+	n2 = n*n
+	m = charmical_function(squareAndMultiply(c,l,n2),n)*mi % n
+	return m
+
 def main(argv):
 	# parse command line options
 	try:

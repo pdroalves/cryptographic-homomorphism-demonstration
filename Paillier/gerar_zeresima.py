@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import json
-import elgamal_cipher as ElGamal
+import paillier_cipher as Paillier
 import generate_prime as Prime
 
 candidatos = [
@@ -10,42 +10,45 @@ candidatos = [
 	"Hal Jordan",
 	"Tony Stark",
 	"Steve Rogers"]
-zeresima = {}
-
-for candidato in candidatos:
-	zeresima[candidato] = 0
 
 p = None
-print "Gerando primo"
-while p is None:
+q = None
+print "Gerando primos"
+while p is None or q is None:
 	try:
-		p = Prime.generate_large_prime(1024)
+		p = Prime.generate_large_prime(512)
+		q = Prime.generate_large_prime(512)
+
+		assert p != q
+
 	except Exception,err:
 		p = None
+		q = None
 		print "Falha ao tentar gerar primo - \%s" % err
-print "Primo gerado!"
+print "Primos gerados!"
 
 print "Gerando chaves"
-alpha,beta,d = ElGamal.gerar_chaves(p)
+n,g,l,mi = Paillier.gerar_chaves(p,q)
 print "Chaves geradas"
 
+zeresima = {}
 print "Cifrando"
-c,ke,km = ElGamal.encrypt_int(p,alpha,beta,0) # This is used only to calculate ke and km
+for candidato in candidatos:
+	c = Paillier.encrypt_int(n,g,0)
+	zeresima[candidato] = c
 print "Cifra calculada"
 
 with open("votos_cifrados.dat","w") as f:
 	f.write(json.dumps(zeresima,indent=4))
-with open("elgamal_public.key","w") as f:
+with open("paillier_public.key","w") as f:
 	data = json.dumps({
-			"p":p,
-			"alpha":alpha,
-			"beta":beta,
-			"ke":ke
+			"n":n,
+			"g":g
 		})
 	f.write(data)
-with open("elgamal_private.key","w") as f:
+with open("paillier_private.key","w") as f:
 	data = json.dumps({
-			"d":d,
-			"km":km
+			"lambda":l,
+			"mi":mi
 		})
 	f.write(data)
