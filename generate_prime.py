@@ -61,4 +61,4 @@ def generate_large_prime(k):
          r-=1
          if is_prime(n) == True:
              return n
-     return "Failure after "+`r_` + " tries."
+     raise Exception("Failure after %s tries." % r)

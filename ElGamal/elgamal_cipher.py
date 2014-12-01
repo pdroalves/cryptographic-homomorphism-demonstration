@@ -3,6 +3,7 @@ import sys
 import getopt
 import random
 import json
+import os
 import generate_prime as Prime
 
 def is_int(x):
@@ -24,7 +25,7 @@ def ascii_to_word(a):
 	except:
 		return a
 
-def squareAndMultiply(base,exponent,modulus):
+def square_and_multiply(base,exponent,modulus):
 	#Converting the exponent to its binary form
 	binaryExponent = []
 	while exponent != 0:
@@ -40,77 +41,149 @@ def squareAndMultiply(base,exponent,modulus):
 			result = (result*result*base) % modulus
 	return result
 
-def gerar_chaves(p):
-	# Recebe um primo grande p
+def generate_keys(p):
+	#
+	# Receives a big prime p
+	#
+	# Public key: (p,alpha,beta)
+	# Private key: (d) 
+
 	alpha = random.randrange(0,p)
 	d = random.randrange(2,p-1)
-	beta = squareAndMultiply(alpha,d,p)
+	beta = square_and_multiply(alpha,d,p)
 
-	# return {
-	# 	"public":{
-	# 		"p":p,
-	# 		"alpha":alpha,
-	# 		"beta":beta
-	# 	},
-	# 	"private":{
-	# 		"d":d
-	# 	}
-	return [alpha,beta,d]
+	return {"pub":{
+				"p":p,
+				"alpha":alpha,
+				"beta":beta},
+			"priv":{
+			 "d":d
+			 }
+		   }
+
+def modinv(x,p):
+	#
+	# Computes the moduler inversion of x ** p-2 mod p
+	#
+	return square_and_multiply(x,p-2,p)
 	
+def encrypt_string(pub,m):
+	#
+	# 	Converts all characters from a string m
+	#  to an array of integers, encrypts all elements and
+	#  add ke and km to public key
+	#
 
-def encrypt(p,alpha,beta,m,ke=None,km=None):
-	if km is None:
+	assert pub.has_key('p')
+	assert pub.has_key('alpha')
+	assert pub.has_key('beta')
+	p = pub['p']
+	alpha = pub['alpha']
+	beta = pub['beta']
+
+	if not pub.has_key('ke') or not pub.has_key('km'): 
 		i = random.randrange(2,p-1)
-		ke = squareAndMultiply(alpha,i,p)
-		km = squareAndMultiply(beta,i,p)
+		ke = square_and_multiply(alpha,i,p)
+		km = square_and_multiply(beta,i,p)
+		pub['ke'] = ke
+		pub['km'] = km
+	else:
+		ke = pub['ke']
+		km = pub['km']
 
 	ascii = word_to_ascii(m)
 	c = []
 	for x in ascii:
-		c.append( (x*km) % p)
+		c.append(encrypt_int(pub,x))
 
-	return c,ke,km
+	return c
 
-def encrypt_int(p,alpha,beta,m,ke=None,km=None):
-	if km is None:
+
+def decrypt_string(pub,priv,c):
+	#
+	#  Receives an array of encrypted integers,
+	# decrypts each integer, convert it to an ascii character and 
+	# append it in a string
+	#
+
+	assert pub.has_key('p')
+	assert pub.has_key('ke')
+	assert priv.has_key('d')
+	p = pub['p']
+	ke = pub['ke']
+	d = priv['d']
+
+	x = []
+	if not pub.has_key('km'):
+		km = square_and_multiply(ke,d,p)
+	else:
+		km = pub['km']
+
+	inv = modinv(km,p)
+	for y in c:
+		x.append(decrypt_int(pub,priv,y))
+	return ascii_to_word(x)
+
+def encrypt_int(pub,m):
+	#
+	# Encrypts a single integer
+	#
+
+	assert is_int(m)
+	assert pub.has_key('p')
+	assert pub.has_key('alpha')
+	assert pub.has_key('beta')
+	p = pub['p']
+	alpha = pub['alpha']
+	beta = pub['beta']
+
+	if not pub.has_key('ke') or not pub.has_key('km'): 
 		i = random.randrange(2,p-1)
-		ke = squareAndMultiply(alpha,i,p)
-		km = squareAndMultiply(beta,i,p)
+		ke = square_and_multiply(alpha,i,p)
+		km = square_and_multiply(beta,i,p)
+		pub['ke'] = ke
+		pub['km'] = km
+	else:
+		ke = pub['ke']
+		km = pub['km']
 
 	c = (m*km) % p
 
-	return c,ke,km
+	return c
 
-def modinv(x,p):
-	return squareAndMultiply(x,p-2,p)
+def decrypt_int(pub,priv,c):
+	#
+	# Decrypts a single integer
+	#
+	assert is_int(c)
+	assert pub.has_key('p')
+	assert pub.has_key('ke')
+	assert priv.has_key('d')
+	p = pub['p']
+	ke = pub['ke']
+	km = pub['km']
+	d = priv['d']
 
-def decrypt(d,p,c,ke,km=None):
-	x = []
-	if km is None:
-		km = squareAndMultiply(ke,d,p)
+	if not pub.has_key('km'):
+		km = square_and_multiply(ke,d,p)
+	else:
+		km = pub['km']
 	inv = modinv(km,p)
-	for y in c:
-		x.append(y*inv % p)
-	return ascii_to_word(x)
-
-def decrypt_int(d,p,c,ke,km=None):
-	if km is None:
-		km = squareAndMultiply(ke,d,p)
-	inv = modinv(km,p)
-	m = c*inv % p
-	return m
+	return c*inv % p
 
 def main(argv):
+	pub_file_name = None
+	priv_file_name = None
 	# parse command line options
 	try:
 		opts, args = getopt.getopt(argv, "hedi:",["encrypt","decrypt","inputfile="])
 	except getopt.GetoptError:
-		print 'elgamal_cipher.py -m <message>'
+		print 'elgamal_cipher.py -i <inputfile> [-e <encrypt_mode> |-d <decrypt_mode>] '
 		sys.exit(2)
 	# process options
 	for opt, arg in opts: 
 		if opt == '-h':
-			print 'test.py -i <inputfile> -o <outputfile>'
+			print 'elgamal_cipher.py -i <inputfile> [-e <encrypt_mode> |-d <decrypt_mode>] '
 			sys.exit()
 		elif opt in ("-e", "--encrypt"):
 			mode = "encrypt"
@@ -118,6 +191,10 @@ def main(argv):
 			mode = "decrypt"
 		elif opt in ("-i","--inputfile"):
 			inputfile = arg
+		elif opt in ("--pub"):
+			pub_file_name = "elgamal_public.key"
+		elif opt in ("--priv"):
+			priv_file_name = "elgamal_private.key"
 
 	if mode == "encrypt":
 
@@ -125,55 +202,60 @@ def main(argv):
 			m = f.read()
 
 		p = None
-		print "Gerando primo"
+		print "Generating a prime..."
 		while p is None:
 			try:
 				p = Prime.generate_large_prime(1024)
 			except Exception,err:
 				p = None
-				print "Falha ao tentar gerar primo - \%s" % err
-		print "Primo gerado!"
+				print "Failure on prime generation - \%s" % err
+		print "Prime found!"
 
-		print "Gerando chaves"
-		alpha,beta,d = gerar_chaves(p)
-		print "Chaves geradas"
+		print "Generating keys..."
+		keys = generate_keys(p)
+		print "The keys were generated."
 
-		print "Cifrando"
-		c,ke = encrypt(p,alpha,beta,m)
-		print "Cifra calculada"
+		print "Encrypting..."
+		c = encrypt_string(keys['pub'],m)
+		print "Encryption done."
 
-		with open("elgamal_public.key","w") as f:
+		# Saving data
+		if not pub_file_name:
+			pub_file_name = "elgamal_public.key"
+		if not priv_file_name:
+			priv_file_name = "elgamal_private.key"
+		encrypted_data_file_name = os.path.splitext(inputfile)[0]+"_encrypted.txt"
+		with open(pub_file_name,"w") as f:
+			data = json.dumps(keys['pub'])
+			f.write(data)
+			print "Public key stored in %s"%pub_file_name
+		with open(priv_file_name,"w") as f:
+			data = json.dumps(keys['priv'])
+			f.write(data)
+			print "Private key stored in %s"%priv_file_name
+		with open(encrypted_data_file_name,"w") as f:
 			data = json.dumps({
-					"p":p,
-					"alpha":alpha,
-					"beta":beta
+				"message":c
 				})
 			f.write(data)
-		with open("elgamal_private.key","w") as f:
-			data = json.dumps({
-					"d":d
-				})
-			f.write(data)
-		with open("encrypted_data.dat","w") as f:
-			data = json.dumps({
-				"message":c,
-				"ke":ke
-				})
-			f.write(data)
+			print "Encrypted message stored in %s"%encrypted_data_file_name
+
 	elif mode == "decrypt":
+
+		if not pub_file_name:
+			pub_file_name = "elgamal_public.key"
+		if not priv_file_name:
+			priv_file_name = "elgamal_private.key"
 
 		with open(inputfile,"r") as f:
 			data = json.load(f)
 			c = data['message']
-			ke = data['ke']
-		with open("elgamal_public.key","r") as f:
-			data = json.load(f)
-			p = data['p']
-		with open("elgamal_private.key","r") as f:
-			data = json.load(f)
-			d = data['d']
-
-		print "Mensagem cifrada recuperada: %s" % (decrypt(d,p,c,ke))
+		with open(pub_file_name,"r") as f:
+			pub = json.load(f)
+		with open(priv_file_name,"r") as f:
+			priv = json.load(f)
+			
+		print "Encrypted message recovered: %s" % (decrypt_string(pub,priv,c))
 
 if __name__ == "__main__":
 	main(sys.argv[1:])

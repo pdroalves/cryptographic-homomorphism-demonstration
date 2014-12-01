@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 import sys
 import getopt
 import random
@@ -24,7 +25,7 @@ def ascii_to_word(a):
 	except:
 		return a
 
-def squareAndMultiply(base,exponent,modulus):
+def square_and_multiply(base,exponent,modulus):
 	#Converting the exponent to its binary form
 	binaryExponent = []
 	while exponent != 0:
@@ -40,46 +41,88 @@ def squareAndMultiply(base,exponent,modulus):
 			result = (result*result*base) % modulus
 	return result
 
-def gerar_chaves(p,q):
+def generate_keys(p,q):
 	n = p*q
 	g = n+1
 	l = (p-1)*(q-1)# == phi(n)
-	mi = squareAndMultiply(l,l-1,n)
-	return n,g,l,mi
+	mi = square_and_multiply(l,l-1,n)
+	return {"pub":{
+				"n":n,
+				"g":g},
+			"priv":{
+			 "lambda":l,
+			 "mi":mi
+			 }
+		   }
 
-def encrypt(n,g,m):
+def encrypt_string(pub,m):
+	#
+	# 	Converts all characters from a string m
+	#  to an array of integers, encrypts all elements
+	#
+
+	assert pub.has_key('n')
+	assert pub.has_key('g')
+	n = pub['n']
+	g = pub['g']
+
 	ascii = word_to_ascii(m)
 	c = []
-	n2 = n*n
 	for x in ascii:
 		assert x < n
-		r = random.randrange(1,n)
-		c.append(squareAndMultiply(g,x,n2)*squareAndMultiply(r,n,n2))
+		c.append(encrypt_int(pub,x))
 
 	return c
 
-def decrypt(c,n,l,mi):
+def decrypt_string(pub,priv,c):	
+	assert pub.has_key('n')
+	assert pub.has_key('g')
+	assert priv.has_key('lambda')
+	assert priv.has_key('mi')
+	n = pub['n']
+	g = pub['g']
+	l = priv['lambda']
+	mi = priv['mi']
+
 	x = []
 	charmical_function = lambda u,n: (u-1)/n
 	n2 = n*n
 	for y in c:
-		x.append(charmical_function(squareAndMultiply(y,l,n2),n)*mi % n)
+		x.append(decrypt_int(pub,priv,y))
 	return ascii_to_word(x)
 
-def encrypt_int(n,g,m):
+def encrypt_int(pub,m):
+	assert is_int(m)
+	assert pub.has_key('n')
+	assert pub.has_key('g')
+	n = pub['n']
+	g = pub['g']
+
 	assert m < n
 	n2 = n*n
 	r = random.randrange(1,n)
-	c = squareAndMultiply(g,m,n2)*squareAndMultiply(r,n,n2)
+	c = square_and_multiply(g,m,n2)*square_and_multiply(r,n,n2)
 	return c
 
-def decrypt_int(c,n,l,mi):
+def decrypt_int(pub,priv,c):
+	assert is_int(c)	
+	assert pub.has_key('n')
+	assert pub.has_key('g')
+	assert priv.has_key('lambda')
+	assert priv.has_key('mi')
+	n = pub['n']
+	g = pub['g']
+	l = priv['lambda']
+	mi = priv['mi']
+
 	charmical_function = lambda u,n: (u-1)/n
 	n2 = n*n
-	m = charmical_function(squareAndMultiply(c,l,n2),n)*mi % n
+	m = charmical_function(square_and_multiply(c,l,n2),n)*mi % n
 	return m
 
 def main(argv):
+	pub_file_name = None
+	priv_file_name = None
 	# parse command line options
 	try:
 		opts, args = getopt.getopt(argv, "hedi:",["encrypt","decrypt","inputfile="])
@@ -105,7 +148,7 @@ def main(argv):
 
 		p = None
 		q = None
-		print "Gerando primos"
+		print "Generating primes..."
 		while p is None or q is None:
 			try:
 				p = Prime.generate_large_prime(512)
@@ -116,48 +159,53 @@ def main(argv):
 			except Exception,err:
 				p = None
 				q = None
-				print "Falha ao tentar gerar primo - \%s" % err
-		print "Primos gerados!"
+				print "Failure on prime generation - \%s" % err
+		print "Prime found!"
 
-		print "Gerando chaves"
-		n,g,l,mi = gerar_chaves(p,q)
-		print "Chaves geradas"
+		print "Generating keys..."
+		keys = generate_keys(p,q)
+		print "The keys were generated."
 
-		print "Cifrando"
-		c = encrypt(n,g,m)
-		print "Cifra calculada"
+		print "Encrypting..."
+		c = encrypt_string(keys['pub'],m)
+		print "Encryption done."
 
-		with open("paillier_public.key","w") as f:
-			data = json.dumps({
-					"n":n,
-					"g":g
-				})
+		if not pub_file_name:
+			pub_file_name = "paillier_public.key"
+		if not priv_file_name:
+			priv_file_name = "paillier_private.key"
+		encrypted_data_file_name = os.path.splitext(inputfile)[0]+"_encrypted.txt"
+		with open(pub_file_name,"w") as f:
+			data = json.dumps(keys['pub'])
 			f.write(data)
-		with open("paillier_private.key","w") as f:
-			data = json.dumps({
-					"lambda":l,
-					"mi":mi
-				})
+			print "Public key stored in %s"%pub_file_name
+		with open(priv_file_name,"w") as f:
+			data = json.dumps(keys['priv'])
 			f.write(data)
-		with open("encrypted_data.dat","w") as f:
+			print "Private key stored in %s"%priv_file_name
+		with open(encrypted_data_file_name,"w") as f:
 			data = json.dumps({
 				"message":c
 				})
 			f.write(data)
+			print "Encrypted message stored in %s"%encrypted_data_file_name
+
 	elif mode == "decrypt":
+
+		if not pub_file_name:
+			pub_file_name = "paillier_public.key"
+		if not priv_file_name:
+			priv_file_name = "paillier_private.key"
 
 		with open(inputfile,"r") as f:
 			data = json.load(f)
 			c = data['message']
-		with open("paillier_public.key","r") as f:
-			data = json.load(f)
-			n = data['n']
-			g = data['g']
-		with open("paillier_private.key","r") as f:
-			data = json.load(f)
-			l = data['lambda']
-			mi = data['mi']
+		with open(pub_file_name,"r") as f:
+			pub = json.load(f)
+		with open(priv_file_name,"r") as f:
+			priv = json.load(f)
+			
+		print "Encrypted message recovered: %s" % (decrypt_string(pub,priv,c))
 
-		print "Mensagem cifrada recuperada: %s" % (decrypt(c,n,l,mi))
 if __name__ == "__main__":
 	main(sys.argv[1:])
