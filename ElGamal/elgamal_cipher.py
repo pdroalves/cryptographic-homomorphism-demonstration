@@ -4,6 +4,7 @@ import getopt
 import random
 import json
 import os
+sys.path.append('../') # generate_prime.py is in the parent directory
 import generate_prime as Prime
 
 def is_int(x):
@@ -121,7 +122,7 @@ def decrypt_string(pub,priv,c):
 
 	inv = modinv(km,p)
 	for y in c:
-		x.append(decrypt_int(pub,priv,y))
+		x.append(decrypt_int(pub,priv,y,inv=inv))
 	return ascii_to_word(x)
 
 def encrypt_int(pub,m):
@@ -151,7 +152,7 @@ def encrypt_int(pub,m):
 
 	return c
 
-def decrypt_int(pub,priv,c):
+def decrypt_int(pub,priv,c,inv):
 	#
 	# Decrypts a single integer
 	#
@@ -168,7 +169,8 @@ def decrypt_int(pub,priv,c):
 		km = square_and_multiply(ke,d,p)
 	else:
 		km = pub['km']
-	inv = modinv(km,p)
+	if not inv:
+		inv = modinv(km,p)
 	return c*inv % p
 
 def main(argv):
@@ -246,6 +248,7 @@ def main(argv):
 			pub_file_name = "elgamal_public.key"
 		if not priv_file_name:
 			priv_file_name = "elgamal_private.key"
+		decrypted_data_file_name = inputfile.replace("_encrypted.","_decrypted.")
 
 		with open(inputfile,"r") as f:
 			data = json.load(f)
@@ -255,7 +258,12 @@ def main(argv):
 		with open(priv_file_name,"r") as f:
 			priv = json.load(f)
 			
-		print "Encrypted message recovered: %s" % (decrypt_string(pub,priv,c))
+		print "Data loaded. Decrypting..."
+
+		with open(decrypted_data_file_name,"w") as f:
+			f.write(decrypt_string(pub,priv,c))
+
+		print "Encrypted message recovered and stored in %s." %decrypted_data_file_name 
 
 if __name__ == "__main__":
 	main(sys.argv[1:])

@@ -4,6 +4,7 @@ import sys
 import getopt
 import random
 import json
+sys.path.append('../') # generate_prime.py is in the parent directory
 import generate_prime as Prime
 
 def is_int(x):
@@ -68,9 +69,10 @@ def encrypt_string(pub,m):
 
 	ascii = word_to_ascii(m)
 	c = []
+	n2 = n*n
 	for x in ascii:
 		assert x < n
-		c.append(encrypt_int(pub,x))
+		c.append(encrypt_int(pub,x,n2=n2))
 
 	return c
 
@@ -91,7 +93,7 @@ def decrypt_string(pub,priv,c):
 		x.append(decrypt_int(pub,priv,y))
 	return ascii_to_word(x)
 
-def encrypt_int(pub,m):
+def encrypt_int(pub,m,n2=None):
 	assert is_int(m)
 	assert pub.has_key('n')
 	assert pub.has_key('g')
@@ -99,7 +101,8 @@ def encrypt_int(pub,m):
 	g = pub['g']
 
 	assert m < n
-	n2 = n*n
+	if not n2:
+		n2 = n*n
 	r = random.randrange(1,n)
 	c = square_and_multiply(g,m,n2)*square_and_multiply(r,n,n2)
 	return c
@@ -151,8 +154,8 @@ def main(argv):
 		print "Generating primes..."
 		while p is None or q is None:
 			try:
-				p = Prime.generate_large_prime(512)
-				q = Prime.generate_large_prime(512)
+				p = Prime.generate_large_prime(256)
+				q = Prime.generate_large_prime(256)
 
 				assert p != q
 
@@ -196,6 +199,8 @@ def main(argv):
 			pub_file_name = "paillier_public.key"
 		if not priv_file_name:
 			priv_file_name = "paillier_private.key"
+		decrypted_data_file_name = inputfile.replace("_encrypted.","_decrypted.")
+
 
 		with open(inputfile,"r") as f:
 			data = json.load(f)
@@ -204,8 +209,13 @@ def main(argv):
 			pub = json.load(f)
 		with open(priv_file_name,"r") as f:
 			priv = json.load(f)
-			
-		print "Encrypted message recovered: %s" % (decrypt_string(pub,priv,c))
+		
+		print "Data loaded. Decrypting..."	
+
+		with open(decrypted_data_file_name,"w") as f:
+			f.write(decrypt_string(pub,priv,c))
+
+		print "Encrypted message recovered and stored in %s." %decrypted_data_file_name 
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
