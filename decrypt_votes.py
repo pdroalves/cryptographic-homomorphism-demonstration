@@ -55,7 +55,7 @@ def main(argv):
 
 	candidates = data['candidates']
 	early_voting_table = data['voting_table']
-	plain_voting_table = [Cipher.decrypt_int(pub,priv,x) for x in early_voting_table]
+	plain_voting_table = [Cipher.decrypt(pub,priv,x) for x in early_voting_table]
 
 	candidates_sorted = sorted(candidates,key=lambda x:plain_voting_table[candidates[x]],reverse=True)
 

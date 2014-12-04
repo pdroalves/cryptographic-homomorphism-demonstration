@@ -53,7 +53,7 @@ def main(argv):
 	early_voting_table = data['voting_table']
 
 	for index,vote in enumerate(votes):
-		encrypted_vote = Cipher.encrypt_int(pub,vote)
+		encrypted_vote = Cipher.encrypt(pub,vote)
 		if cipher_loaded == "elgamal":
 			early_voting_table[index] = early_voting_table[index] + encrypted_vote
 		elif cipher_loaded == "paillier":

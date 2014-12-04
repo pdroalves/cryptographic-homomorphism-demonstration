@@ -28,7 +28,7 @@ def main(argv):
 	if not cipher_loaded:
 		raise Exception("Unknown cipher")
 
-	print "Using %s encryption scheme"
+	print "Using %s encryption scheme" % cipher_loaded
 
 	candidates = [
 		"Bruce Wayne", 
@@ -80,7 +80,7 @@ def main(argv):
 	# Encrypts the voting table
 	voting_table = []
 	for index in range(len(candidates)):
-		voting_table.append(Cipher.encrypt_int(keys['pub'],int(0)))
+		voting_table.append(Cipher.encrypt(keys['pub'],int(0)))
 	print "Encryption done."
 
 	# Saving data
