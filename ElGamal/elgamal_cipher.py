@@ -7,6 +7,9 @@ import os
 sys.path.append('../') # generate_prime.py is in the parent directory
 import generate_prime as Prime
 
+#randrange is mersenne twister and is completely deterministic
+#unusable for serious crypto purposes
+
 def is_int(x):
 	try:
 		int(x)
@@ -38,8 +41,8 @@ def generate_keys(p):
 	# Public key: (p,alpha,beta)
 	# Private key: (d) 
 
-	alpha = random.randrange(0,p)
-	d = random.randrange(2,p-1)
+	alpha = random.randrange(1,p) # if |G| is prime, then all elements a not 1 \in G are primitives
+	d = random.randrange(2,p-1)# from 2 to p-2
 	beta = square_and_multiply(alpha,d,p)
 
 	return {"pub":{
@@ -57,7 +60,7 @@ def modinv(x,p):
 	#
 	return square_and_multiply(x,p-2,p)
 	
-def encrypt(pub,m):
+def encrypt(pub,m,km=None):
 	#
 	# Encrypts a single integer
 	#
@@ -70,37 +73,46 @@ def encrypt(pub,m):
 	alpha = pub['alpha']
 	beta = pub['beta']
 
-	if not pub.has_key('ke') or not pub.has_key('km'): 
+	if not km:
 		i = random.randrange(2,p-1)
 		ke = square_and_multiply(alpha,i,p)
 		km = square_and_multiply(beta,i,p)
-		pub['ke'] = ke
-		pub['km'] = km
+
+		c = (m*km) % p
+		return c,ke
 	else:
-		ke = pub['ke']
-		km = pub['km']
 
-	c = (m*km) % p
+		c = (m*km) % p
+		return c,None
 
-	return c
-
-def decrypt(pub,priv,c,inv=None):
+def decrypt(pub,priv,x,inv=None):
 	#
 	# Decrypts a single integer
 	#
-	assert is_int(c)
 	assert pub.has_key('p')
-	assert pub.has_key('ke')
 	assert priv.has_key('d')
+	assert x.has_key('c')
+	assert x.has_key('ke')
 	p = pub['p']
-	ke = pub['ke']
-	km = pub['km']
 	d = priv['d']
 
-	if not pub.has_key('km'):
-		km = square_and_multiply(ke,d,p)
-	else:
-		km = pub['km']
+	c = x['c']
+	ke = x['ke']
+
+	km = square_and_multiply(ke,d,p)
+
 	if not inv:
 		inv = modinv(km,p)
 	return c*inv % p
+
+def generate_lookup_table(g,p,a=0,b=10**3):
+	#
+	# Receives an base g, prime p, a public key pub and a interval [a,b],
+	# computes and encrypts all values g**i mod p for a <= i <= b and 
+	# returns a lookup table
+	#
+	table = {}
+	for i in xrange(a,b):
+		c = square_and_multiply(g,i,p)
+		table[c] = i
+	return table

@@ -5,7 +5,7 @@ import getopt
 import generate_prime as Prime
 
 def main(argv):
-	inputfile = "encrypted_votes.dat"
+	inputfile = "encrypted_votes.json"
 	pub_file_name = "public.key"
 	data = None
 	votes = None
@@ -53,12 +53,18 @@ def main(argv):
 	early_voting_table = data['voting_table']
 
 	for index,vote in enumerate(votes):
-		encrypted_vote = Cipher.encrypt(pub,vote)
-		if cipher_loaded == "elgamal":
-			early_voting_table[index] = early_voting_table[index] + encrypted_vote
+		if cipher_loaded == "elgamal":			
+			encrypted_vote,ke = Cipher.encrypt(pub,Cipher.square_and_multiply(pub['alpha'],vote,pub['p']))
+			early_voting_table[index]['ke'] = early_voting_table[index]['ke']*ke
+			early_voting_table[index]['c'] = early_voting_table[index]['c'] * encrypted_vote
 		elif cipher_loaded == "paillier":
+			encrypted_vote = Cipher.encrypt(pub,vote)
 			early_voting_table[index] = early_voting_table[index] * encrypted_vote
 
+	# Saving data
+	with open(pub_file_name,"w") as f:
+		json.dump(pub,f)
+		print "Updated public key stored in %s"%pub_file_name
 	with open(inputfile,"w") as f:
 		data = json.dumps({'candidates':candidates,'voting_table':early_voting_table})
 		f.write(data)

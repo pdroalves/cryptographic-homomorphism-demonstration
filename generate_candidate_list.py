@@ -2,9 +2,14 @@
 import json
 import sys
 import getopt
+import random
 import generate_prime as Prime
 
 def main(argv):
+	pub_file_name = "public.key"
+	priv_file_name = "private.key"
+	encrypted_data_file_name = "encrypted_votes.json"
+
 	# parse command line options
 	try:
 		opts, args = getopt.getopt(argv, "hc:",["cipher="])
@@ -39,10 +44,7 @@ def main(argv):
 		"Steve Rogers",]
 	candidate_list = {}
 
-	if cipher_loaded == "paillier":
-		key_size = 512
-	elif cipher_loaded == "elgamal":
-		key_size = 1024
+	key_size = 1024
 
 	p = None
 	print "Generating a prime..."
@@ -66,6 +68,7 @@ def main(argv):
 	print "Generating keys..."
 	if cipher_loaded == "elgamal":
 		keys = Cipher.generate_keys(p)
+
 	elif cipher_loaded == "paillier":
 		keys = Cipher.generate_keys(p,q)
 	print "The keys were generated."
@@ -80,24 +83,22 @@ def main(argv):
 	# Encrypts the voting table
 	voting_table = []
 	for index in range(len(candidates)):
-		voting_table.append(Cipher.encrypt(keys['pub'],int(0)))
+		if cipher_loaded == "elgamal":
+			c,ke = Cipher.encrypt(keys['pub'],int(1))#This is equal to encrypts g**0 mod p
+			voting_table.append({'c':c,'ke':ke}) 
+		else:
+			voting_table.append(Cipher.encrypt(keys['pub'],int(0)))
 	print "Encryption done."
 
 	# Saving data
-	pub_file_name = "public.key"
-	priv_file_name = "private.key"
-	encrypted_data_file_name = "encrypted_votes.dat"
 	with open(pub_file_name,"w") as f:
-		data = json.dumps(keys['pub'])
-		f.write(data)
+		json.dump(keys['pub'],f)
 		print "Public key stored in %s"%pub_file_name
 	with open(priv_file_name,"w") as f:
-		data = json.dumps(keys['priv'])
-		f.write(data)
+		json.dump(keys['priv'],f)
 		print "Private key stored in %s"%priv_file_name
 	with open(encrypted_data_file_name,"w") as f:
-		data = json.dumps({'candidates':candidate_list,'voting_table':voting_table})
-		f.write(data)
+		json.dump({'candidates':candidate_list,'voting_table':voting_table},f)
 		print "Encrypted votes stored in %s"%encrypted_data_file_name
 
 if __name__ == "__main__":

@@ -5,8 +5,8 @@ import getopt
 import generate_prime as Prime
 
 def main(argv):
-	inputfile = "encrypted_votes.dat"
-	output = "decrypted_votes.dat"
+	inputfile = "encrypted_votes.json"
+	output = "decrypted_votes.json"
 	pub_file_name = "public.key"
 	priv_file_name = "private.key"
 	data = None
@@ -48,23 +48,26 @@ def main(argv):
 		pub = json.load(f)
 	with open(priv_file_name,"r") as f:
 		priv = json.load(f)
+	
+	# Generates a lookup table to help decryption 
+	print "Generating lookup table"
+	lookup_table = Cipher.generate_lookup_table(pub['alpha'],pub['p'],a=0,b=10**3)
 
 	assert data
 	assert data.has_key('candidates')
 	assert data.has_key('voting_table')
 
 	candidates = data['candidates']
-	early_voting_table = data['voting_table']
-	plain_voting_table = [Cipher.decrypt(pub,priv,x) for x in early_voting_table]
+	ciphertext_voting_table = data['voting_table']
+	plaintext_voting_table = [lookup_table[Cipher.decrypt(pub,priv,x)] for x in ciphertext_voting_table]
 
-	candidates_sorted = sorted(candidates,key=lambda x:plain_voting_table[candidates[x]],reverse=True)
+	candidates_sorted = sorted(candidates,key=lambda x:plaintext_voting_table[candidates[x]],reverse=True)
 
 	for candidate in candidates_sorted:
-		print "%s - %d votes" % (candidate,plain_voting_table[candidates[candidate]])
-
+		print "%s - %d votes" % (candidate,plaintext_voting_table[candidates[candidate]])
 
 	with open(output,"w") as f:
-		data = json.dumps({'candidates':candidates,'voting_table':plain_voting_table})
+		data = json.dumps({'candidates':candidates,'voting_table':plaintext_voting_table})
 		f.write(data)
 		print "Decrypted votes stored in %s"%output
 

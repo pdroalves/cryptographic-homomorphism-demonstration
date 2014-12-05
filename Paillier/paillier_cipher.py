@@ -7,6 +7,9 @@ import json
 sys.path.append('../') # generate_prime.py is in the parent directory
 import generate_prime as Prime
 
+#randrange is mersenne twister and is completely deterministic
+#unusable for serious crypto purposes
+
 def is_int(x):
 	try:
 		int(x)
