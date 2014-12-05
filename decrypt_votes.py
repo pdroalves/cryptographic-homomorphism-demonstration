@@ -50,8 +50,6 @@ def main(argv):
 		priv = json.load(f)
 	
 	# Generates a lookup table to help decryption 
-	print "Generating lookup table"
-	lookup_table = Cipher.generate_lookup_table(pub['alpha'],pub['p'],a=0,b=10**3)
 
 	assert data
 	assert data.has_key('candidates')
@@ -59,7 +57,13 @@ def main(argv):
 
 	candidates = data['candidates']
 	ciphertext_voting_table = data['voting_table']
-	plaintext_voting_table = [lookup_table[Cipher.decrypt(pub,priv,x)] for x in ciphertext_voting_table]
+
+	if cipher_loaded == "elgamal":
+		print "Generating lookup table"
+		lookup_table = Cipher.generate_lookup_table(pub['alpha'],pub['p'],a=0,b=10**3)
+		plaintext_voting_table = [lookup_table[Cipher.decrypt(pub,priv,x)] for x in ciphertext_voting_table]
+	else:
+		plaintext_voting_table = [Cipher.decrypt(pub,priv,x) for x in ciphertext_voting_table]
 
 	candidates_sorted = sorted(candidates,key=lambda x:plaintext_voting_table[candidates[x]],reverse=True)
 
