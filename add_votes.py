@@ -3,6 +3,7 @@ import json
 import sys
 import getopt
 import generate_prime as Prime
+import auxiliar as Aux
 
 def main(argv):
 	inputfile = "encrypted_votes.json"
@@ -54,7 +55,7 @@ def main(argv):
 
 	for index,vote in enumerate(votes):
 		if cipher_loaded == "elgamal":			
-			encrypted_vote,ke = Cipher.encrypt(pub,Cipher.square_and_multiply(pub['alpha'],vote,pub['p']))
+			encrypted_vote,ke = Cipher.encrypt(pub,Aux.square_and_multiply(pub['alpha'],vote,pub['p']))
 			early_voting_table[index]['ke'] = early_voting_table[index]['ke']*ke
 			early_voting_table[index]['c'] = early_voting_table[index]['c'] * encrypted_vote
 		elif cipher_loaded == "paillier":

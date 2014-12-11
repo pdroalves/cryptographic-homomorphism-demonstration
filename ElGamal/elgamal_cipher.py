@@ -6,33 +6,10 @@ import json
 import os
 sys.path.append('../') # generate_prime.py is in the parent directory
 import generate_prime as Prime
+import auxiliar as Aux
 
 #randrange is mersenne twister and is completely deterministic
 #unusable for serious crypto purposes
-
-def is_int(x):
-	try:
-		int(x)
-		return True
-	except:
-		return False
-
-
-def square_and_multiply(base,exponent,modulus):
-	#Converting the exponent to its binary form
-	binaryExponent = []
-	while exponent != 0:
-		binaryExponent.append(exponent%2)
-		exponent = exponent/2
-	#Appllication of the square and multiply algorithm
-	result = 1
-	binaryExponent.reverse()
-	for i in binaryExponent:
-		if i == 0:
-			result = (result*result) % modulus
-		else:
-			result = (result*result*base) % modulus
-	return result
 
 def generate_keys(p):
 	#
@@ -43,7 +20,7 @@ def generate_keys(p):
 
 	alpha = random.randrange(1,p) # if |G| is prime, then all elements a not 1 \in G are primitives
 	d = random.randrange(2,p-1)# from 2 to p-2
-	beta = square_and_multiply(alpha,d,p)
+	beta = Aux.square_and_multiply(alpha,d,p)
 
 	return {"pub":{
 				"p":p,
@@ -56,16 +33,17 @@ def generate_keys(p):
 
 def modinv(x,p):
 	#
-	# Computes the moduler inversion of x ** p-2 mod p
+	# Computes the moduler inversion of x ** p-2 mod p,
+	# for p prime
 	#
-	return square_and_multiply(x,p-2,p)
+	return Aux.square_and_multiply(x,p-2,p)
 	
 def encrypt(pub,m,km=None):
 	#
 	# Encrypts a single integer
 	#
 
-	assert is_int(m)
+	assert Aux.is_int(m)
 	assert pub.has_key('p')
 	assert pub.has_key('alpha')
 	assert pub.has_key('beta')
@@ -75,8 +53,8 @@ def encrypt(pub,m,km=None):
 
 	if not km:
 		i = random.randrange(2,p-1)
-		ke = square_and_multiply(alpha,i,p)
-		km = square_and_multiply(beta,i,p)
+		ke = Aux.square_and_multiply(alpha,i,p)
+		km = Aux.square_and_multiply(beta,i,p)
 
 		c = (m*km) % p
 		return c,ke
@@ -99,7 +77,7 @@ def decrypt(pub,priv,x,inv=None):
 	c = x['c']
 	ke = x['ke']
 
-	km = square_and_multiply(ke,d,p)
+	km = Aux.square_and_multiply(ke,d,p)
 
 	if not inv:
 		inv = modinv(km,p)
@@ -113,6 +91,6 @@ def generate_lookup_table(g,p,a=0,b=10**3):
 	#
 	table = {}
 	for i in xrange(a,b):
-		c = square_and_multiply(g,i,p)
+		c = Aux.square_and_multiply(g,i,p)
 		table[c] = i
 	return table
