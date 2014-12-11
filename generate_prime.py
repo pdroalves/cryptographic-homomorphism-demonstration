@@ -1,6 +1,7 @@
 import random
 import math
 import sys
+import auxiliar as Aux
 
 def rabin_miller(n):
      s = n-1
@@ -11,10 +12,8 @@ def rabin_miller(n):
      k = 0
      while k<128:
          a = random.randrange(2,n-1)
-         #a^s is computationally infeasible.  we need a more intelligent approach
-         #v = (a**s)%n
-         #python's core math module can do modular exponentiation
-         v = pow(a,s,n) #where values are (num,exp,mod)
+         #a^s is computationally infeasible
+         v = Aux.square_and_multiply(a,s,n)
          if v != 1:
              i=0
              while v != (n-1):
@@ -53,7 +52,6 @@ def is_prime(n):
 def generate_large_prime(k):
      #k is the desired bit length
      r=100*(math.log(k,2)+1) #number of attempts max
-     r_ = r
      while r>0:
         #randrange is mersenne twister and is completely deterministic
         #unusable for serious crypto purposes
@@ -61,4 +59,4 @@ def generate_large_prime(k):
          r-=1
          if is_prime(n) == True:
              return n
-     raise Exception("Failure after %s tries." % r)
+     raise Exception("Failure after %d tries." % r)
