@@ -3,27 +3,34 @@ import math
 import sys
 import auxiliar as Aux
 
-def rabin_miller(n):
-     s = n-1
-     t = 0
-     while s&1 == 0:
-         s = s/2
-         t +=1
-     k = 0
-     while k<128:
-         a = random.randrange(2,n-1)
-         #a^s is computationally infeasible
-         v = Aux.square_and_multiply(a,s,n)
-         if v != 1:
-             i=0
-             while v != (n-1):
-                 if i == t-1:
-                     return False
-                 else:
-                     i = i+1
-                     v = (v**2)%n
-         k+=2
-     return True
+def miller_rabin(p,s=11):
+    # using security parameter s=11, we have a error probability of less than
+    # 2**-80
+
+    #computes p-1 decomposition in 2**u*r
+    r = p-1
+    u = 0
+    while r&1 == 0:#true while the last bit of r is zero
+        u += 1
+        r = r/2
+
+    # apply miller_rabin primality test
+    for i in range(s):
+        a = random.randrange(2,p-1) # choose random a in {2,3,...,p-2}
+        z = Aux.square_and_multiply(a,r,p)
+
+        if z != 1 and z != p-1:
+            for j in range(u-1):
+                if z != p-1:
+                    z = (z**2) % p
+                    if z == 1:
+                        return False
+                else:
+                    break
+            if z != p-1:
+                return False
+    return True
+
 
 def is_prime(n):
      #lowPrimes is all primes (sans 2, which is covered by the bitwise and operator)
@@ -46,7 +53,7 @@ def is_prime(n):
                     return True
                  if (n % p == 0):
                      return False
-             return rabin_miller(n)
+             return miller_rabin(n)
      return False
 
 def generate_large_prime(k):
