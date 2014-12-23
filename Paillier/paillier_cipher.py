@@ -15,13 +15,12 @@ def generate_keys(p,q):
 	n = p*q
 	g = n+1
 	l = (p-1)*(q-1)# == phi(n)
-	mi = Aux.square_and_multiply(l,l-1,n)
+	
 	return {"pub":{
 				"n":n,
 				"g":g},
 			"priv":{
-			 "lambda":l,
-			 "mi":mi
+			 "lambda":l
 			 }
 		   }
 
@@ -44,11 +43,11 @@ def decrypt(pub,priv,c):
 	assert pub.has_key('n')
 	assert pub.has_key('g')
 	assert priv.has_key('lambda')
-	assert priv.has_key('mi')
 	n = pub['n']
 	g = pub['g']
 	l = priv['lambda']
-	mi = priv['mi']
+	
+	mi = Aux.square_and_multiply(l,l-1,n)
 
 	charmical_function = lambda u,n: (u-1)/n
 	n2 = n*n
